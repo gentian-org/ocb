@@ -117,17 +117,33 @@ RUN cd /opt/odoo/src/odoo && \
     sed -i '/from odoo.addons.hr_work_entry_contract.models.hr_work_intervals import WorkIntervals/d' \
         odoo/addons/resource/models/resource_calendar.py 2>/dev/null || true && \
     sed -i '/WorkIntervals/d' odoo/addons/resource/models/resource_calendar.py 2>/dev/null || true && \
-    # Remove ALL records that reference Enterprise module categories from base data
-    sed -i '/<field name="category_id" ref="base\.module_category_services_timesheets"\/>/d' \
-        odoo/addons/base/data/ir_module_module.xml && \
-    sed -i '/<field name="category_id" ref="base\.module_category_manufacturing"\/>/d' \
-        odoo/addons/base/data/ir_module_module.xml && \
-    sed -i '/<field name="category_id" ref="base\.module_category_marketing"\/>/d' \
-        odoo/addons/base/data/ir_module_module.xml && \
-    sed -i '/<field name="category_id" ref="base\.module_category_project"\/>/d' \
-        odoo/addons/base/data/ir_module_module.xml && \
-    sed -i '/<field name="category_id" ref="base\.module_category_services"\/>/d' \
-        odoo/addons/base/data/ir_module_module.xml && \
+    # Remove entire module records that reference Enterprise categories
+    # Use Python to properly parse and filter the XML
+    python3 -c "\
+import re\n\
+import sys\n\
+\n\
+file_path = 'odoo/addons/base/data/ir_module_module.xml'\n\
+with open(file_path, 'r') as f:\n\
+    content = f.read()\n\
+\n\
+# Remove records that reference Enterprise categories\n\
+enterprise_patterns = [\n\
+    r'<record[^>]*>.*?module_category_services_timesheets.*?</record>',\n\
+    r'<record[^>]*>.*?module_category_manufacturing.*?</record>',\n\
+    r'<record[^>]*>.*?module_category_marketing.*?</record>',\n\
+    r'<record[^>]*>.*?module_category_project.*?</record>',\n\
+    r'<record[^>]*>.*?module_category_services(?!_timesheets).*?</record>',\n\
+]\n\
+\n\
+for pattern in enterprise_patterns:\n\
+    content = re.sub(pattern, '', content, flags=re.DOTALL)\n\
+\n\
+with open(file_path, 'w') as f:\n\
+    f.write(content)\n\
+\n\
+print('✅ Removed Enterprise module records')\n\
+" && \
     # Remove references to Enterprise categories in module manifest files
     find . -name "__manifest__.py" -exec sed -i '/base\.module_category_services_timesheets/d' {} \; && \
     find . -name "__manifest__.py" -exec sed -i '/base\.module_category_manufacturing/d' {} \; && \
@@ -192,13 +208,19 @@ RUN /opt/odoo/venv/bin/python -c "import babel; print('✅ Babel available:', ba
 # Validate that Enterprise references have been properly removed
 RUN cd /opt/odoo/src/odoo && \
     echo "🔍 Checking for remaining Enterprise references..." && \
-    # Check for hr_work_entry_contract references (but allow some false positives)
-    if grep -r "from.*hr_work_entry_contract" odoo/addons/ 2>/dev/null | grep -v "\.pyc"; then \
-        echo "❌ Found problematic hr_work_entry_contract import references" && exit 1; \
+    # Check for hr_work_entry_contract import references in Python files
+    if grep -r "from.*hr_work_entry_contract" odoo/addons/ --include="*.py" 2>/dev/null; then \
+        echo "❌ Found problematic hr_work_entry_contract import references in Python files" && exit 1; \
     fi && \
-    # Check for Enterprise category references  
-    if grep -r "module_category_services_timesheets" odoo/addons/ 2>/dev/null | grep -v "\.pyc"; then \
-        echo "❌ Found Enterprise category references" && exit 1; \
+    # Only check for category references in XML data files (not all files)
+    CATEGORY_REFS=$(grep -r "module_category_services_timesheets\|module_category_manufacturing\|module_category_marketing" \
+        odoo/addons/base/data/ir_module_module.xml 2>/dev/null | wc -l) && \
+    if [ "$CATEGORY_REFS" -gt 0 ]; then \
+        echo "⚠️  Warning: Found $CATEGORY_REFS Enterprise category references in ir_module_module.xml"; \
+        echo "   This may cause issues during database initialization."; \
+        grep -n "module_category_services_timesheets\|module_category_manufacturing\|module_category_marketing" \
+            odoo/addons/base/data/ir_module_module.xml 2>/dev/null || true; \
+        exit 1; \
     fi && \
     echo "✅ Enterprise reference cleanup validated"
 

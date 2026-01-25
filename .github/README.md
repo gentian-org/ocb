@@ -32,7 +32,7 @@ If your branch name contains a slash (`/`), the workflow will:
 
 Examples:
 
-- Branch `ocb/18.0` → Image `ghcr.io/brandli/ocb:18.0`
+- Branch `ocb/18.0` → Image `ghcr.io/gentian-org/ocb:18.0`
 - Branch `myapp/latest` → Image `ghcr.io/brandli/myapp:latest`
 - Branch `api/v2.1` → Image `ghcr.io/brandli/api:v2.1`
 
@@ -48,7 +48,7 @@ docker pull ghcr.io/brandli/setups:main
 docker pull ghcr.io/brandli/setups:ocb-multi-stage
 
 # Pull using name/tag format
-docker pull ghcr.io/brandli/ocb:18.0
+docker pull ghcr.io/gentian-org/ocb:18.0
 ```
 
 ### Authentication for Private Repositories
