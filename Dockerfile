@@ -115,39 +115,39 @@ RUN git clone --depth 1 --branch 18.0 https://github.com/OCA/OCB.git /opt/odoo/s
 RUN cd /opt/odoo/src/odoo && \
     # Remove Enterprise module references from resource calendar
     sed -i '/from odoo.addons.hr_work_entry_contract.models.hr_work_intervals import WorkIntervals/d' \
-        addons/resource/models/resource_calendar.py && \
-    sed -i '/WorkIntervals/d' addons/resource/models/resource_calendar.py && \
-    # Remove Enterprise module categories from base data
-    sed -i '/<record id="module_category_services_timesheets"/,/<\/record>/d' \
-        addons/base/data/ir_module_module.xml && \
-    sed -i '/<record id="module_category_manufacturing"/,/<\/record>/d' \
-        addons/base/data/ir_module_module.xml && \
-    sed -i '/<record id="module_category_marketing"/,/<\/record>/d' \
-        addons/base/data/ir_module_module.xml && \
-    sed -i '/<record id="module_category_project"/,/<\/record>/d' \
-        addons/base/data/ir_module_module.xml && \
-    sed -i '/<record id="module_category_services"/,/<\/record>/d' \
-        addons/base/data/ir_module_module.xml && \
+        odoo/addons/resource/models/resource_calendar.py 2>/dev/null || true && \
+    sed -i '/WorkIntervals/d' odoo/addons/resource/models/resource_calendar.py 2>/dev/null || true && \
+    # Remove ALL records that reference Enterprise module categories from base data
+    sed -i '/<field name="category_id" ref="base\.module_category_services_timesheets"\/>/d' \
+        odoo/addons/base/data/ir_module_module.xml && \
+    sed -i '/<field name="category_id" ref="base\.module_category_manufacturing"\/>/d' \
+        odoo/addons/base/data/ir_module_module.xml && \
+    sed -i '/<field name="category_id" ref="base\.module_category_marketing"\/>/d' \
+        odoo/addons/base/data/ir_module_module.xml && \
+    sed -i '/<field name="category_id" ref="base\.module_category_project"\/>/d' \
+        odoo/addons/base/data/ir_module_module.xml && \
+    sed -i '/<field name="category_id" ref="base\.module_category_services"\/>/d' \
+        odoo/addons/base/data/ir_module_module.xml && \
     # Remove references to Enterprise categories in module manifest files
-    find addons -name "__manifest__.py" -exec sed -i '/base\.module_category_services_timesheets/d' {} \; && \
-    find addons -name "__manifest__.py" -exec sed -i '/base\.module_category_manufacturing/d' {} \; && \
-    find addons -name "__manifest__.py" -exec sed -i '/base\.module_category_marketing/d' {} \; && \
-    find addons -name "__manifest__.py" -exec sed -i '/base\.module_category_project/d' {} \; && \
-    find addons -name "__manifest__.py" -exec sed -i '/base\.module_category_services/d' {} \; && \
+    find . -name "__manifest__.py" -exec sed -i '/base\.module_category_services_timesheets/d' {} \; && \
+    find . -name "__manifest__.py" -exec sed -i '/base\.module_category_manufacturing/d' {} \; && \
+    find . -name "__manifest__.py" -exec sed -i '/base\.module_category_marketing/d' {} \; && \
+    find . -name "__manifest__.py" -exec sed -i '/base\.module_category_project/d' {} \; && \
+    find . -name "__manifest__.py" -exec sed -i '/base\.module_category_services/d' {} \; && \
     # Remove hr_contract dependencies from other modules
-    find addons -name "__manifest__.py" -exec sed -i "s/'hr_contract'[,]*//g" {} \; && \
-    find addons -name "__manifest__.py" -exec sed -i 's/"hr_contract"[,]*//g' {} \; && \
+    find . -name "__manifest__.py" -exec sed -i "s/'hr_contract'[,]*//g" {} \; && \
+    find . -name "__manifest__.py" -exec sed -i 's/"hr_contract"[,]*//g' {} \; && \
     # Clean up any remaining enterprise references
     find . -name "*.py" -exec sed -i '/enterprise.*upgrade\|upgrade.*enterprise/d' {} \; && \
     find . -name "*.js" -exec sed -i '/enterprise.*upgrade\|odoo-enterprise\/upgrade/d' {} \; && \
     find . -name "*.xml" -exec sed -i '/enterprise_upgrade\|upgrade.*enterprise/d' {} \; && \
     # Remove Enterprise upgrade prompts and images
-    rm -rf addons/web/static/img/enterprise_upgrade.jpg 2>/dev/null || true && \
-    rm -rf addons/web/static/src/img/enterprise_upgrade.jpg 2>/dev/null || true
+    rm -rf odoo/addons/web/static/img/enterprise_upgrade.jpg 2>/dev/null || true && \
+    rm -rf odoo/addons/web/static/src/img/enterprise_upgrade.jpg 2>/dev/null || true
 
 # Remove only the most problematic Enterprise modules that break Community functionality
 # Keep essential modules that are needed for basic Odoo operation
-RUN cd /opt/odoo/src/odoo/addons && \
+RUN cd /opt/odoo/src/odoo/odoo/addons && \
     # Remove modules that have hard Enterprise dependencies
     rm -rf hr_work_entry* \
     hr_contract* \
@@ -193,11 +193,11 @@ RUN /opt/odoo/venv/bin/python -c "import babel; print('✅ Babel available:', ba
 RUN cd /opt/odoo/src/odoo && \
     echo "🔍 Checking for remaining Enterprise references..." && \
     # Check for hr_work_entry_contract references (but allow some false positives)
-    if grep -r "from.*hr_work_entry_contract" addons/ 2>/dev/null; then \
+    if grep -r "from.*hr_work_entry_contract" odoo/addons/ 2>/dev/null | grep -v "\.pyc"; then \
         echo "❌ Found problematic hr_work_entry_contract import references" && exit 1; \
     fi && \
     # Check for Enterprise category references  
-    if grep -r "module_category_services_timesheets" addons/ 2>/dev/null; then \
+    if grep -r "module_category_services_timesheets" odoo/addons/ 2>/dev/null | grep -v "\.pyc"; then \
         echo "❌ Found Enterprise category references" && exit 1; \
     fi && \
     echo "✅ Enterprise reference cleanup validated"
