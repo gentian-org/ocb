@@ -111,39 +111,17 @@ USER odoo
 # Clone OCB 18.0
 RUN git clone --depth 1 --branch 18.0 https://github.com/OCA/OCB.git /opt/odoo/src/odoo
 
+# Copy Enterprise cleanup script
+COPY --chown=odoo:odoo cleanup_enterprise.py /tmp/cleanup_enterprise.py
+
 # Comprehensive Enterprise cleanup to ensure pure Community functionality
 RUN cd /opt/odoo/src/odoo && \
     # Remove Enterprise module references from resource calendar
     sed -i '/from odoo.addons.hr_work_entry_contract.models.hr_work_intervals import WorkIntervals/d' \
         odoo/addons/resource/models/resource_calendar.py 2>/dev/null || true && \
     sed -i '/WorkIntervals/d' odoo/addons/resource/models/resource_calendar.py 2>/dev/null || true && \
-    # Remove entire module records that reference Enterprise categories
-    # Use Python to properly parse and filter the XML
-    python3 -c "\
-import re\n\
-import sys\n\
-\n\
-file_path = 'odoo/addons/base/data/ir_module_module.xml'\n\
-with open(file_path, 'r') as f:\n\
-    content = f.read()\n\
-\n\
-# Remove records that reference Enterprise categories\n\
-enterprise_patterns = [\n\
-    r'<record[^>]*>.*?module_category_services_timesheets.*?</record>',\n\
-    r'<record[^>]*>.*?module_category_manufacturing.*?</record>',\n\
-    r'<record[^>]*>.*?module_category_marketing.*?</record>',\n\
-    r'<record[^>]*>.*?module_category_project.*?</record>',\n\
-    r'<record[^>]*>.*?module_category_services(?!_timesheets).*?</record>',\n\
-]\n\
-\n\
-for pattern in enterprise_patterns:\n\
-    content = re.sub(pattern, '', content, flags=re.DOTALL)\n\
-\n\
-with open(file_path, 'w') as f:\n\
-    f.write(content)\n\
-\n\
-print('✅ Removed Enterprise module records')\n\
-" && \
+    # Run Python script to remove Enterprise module records from XML
+    python3 /tmp/cleanup_enterprise.py && \
     # Remove references to Enterprise categories in module manifest files
     find . -name "__manifest__.py" -exec sed -i '/base\.module_category_services_timesheets/d' {} \; && \
     find . -name "__manifest__.py" -exec sed -i '/base\.module_category_manufacturing/d' {} \; && \
@@ -159,7 +137,9 @@ print('✅ Removed Enterprise module records')\n\
     find . -name "*.xml" -exec sed -i '/enterprise_upgrade\|upgrade.*enterprise/d' {} \; && \
     # Remove Enterprise upgrade prompts and images
     rm -rf odoo/addons/web/static/img/enterprise_upgrade.jpg 2>/dev/null || true && \
-    rm -rf odoo/addons/web/static/src/img/enterprise_upgrade.jpg 2>/dev/null || true
+    rm -rf odoo/addons/web/static/src/img/enterprise_upgrade.jpg 2>/dev/null || true && \
+    # Clean up the script
+    rm /tmp/cleanup_enterprise.py
 
 # Remove only the most problematic Enterprise modules that break Community functionality
 # Keep essential modules that are needed for basic Odoo operation
