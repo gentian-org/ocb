@@ -31,6 +31,7 @@ def cleanup_ir_module_module_xml(file_path):
     ]
     
     # Remove entire <record> blocks that contain any Enterprise category reference
+    total_removed = 0
     for category in enterprise_categories:
         # Pattern matches: <record ...> ... category_id ref="base.CATEGORY" ... </record>
         pattern = rf'<record[^>]*>.*?ref="base\.{category}".*?</record>'
@@ -38,7 +39,10 @@ def cleanup_ir_module_module_xml(file_path):
         
         if matches:
             print(f"  ℹ️  Removing {len(matches)} record(s) referencing {category}")
+            total_removed += len(matches)
             content = re.sub(pattern, '', content, flags=re.DOTALL)
+    
+    print(f"  📊 Total records removed: {total_removed}")
     
     # Clean up extra blank lines
     content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
