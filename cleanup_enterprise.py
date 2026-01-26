@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 def cleanup_ir_module_module_xml(file_path):
-    """Remove records that reference Enterprise module categories."""
+    """Remove records that reference Enterprise module categories or have Enterprise licenses."""
     
     print(f"🔧 Processing {file_path}")
     
@@ -39,6 +39,19 @@ def cleanup_ir_module_module_xml(file_path):
         
         if matches:
             print(f"  ℹ️  Removing {len(matches)} record(s) referencing {category}")
+            total_removed += len(matches)
+            content = re.sub(pattern, '', content, flags=re.DOTALL)
+    
+    # Remove all records with Enterprise licenses (OEEL-1, LGPL-3 with to_buy)
+    enterprise_license_patterns = [
+        r'<record[^>]*>.*?<field name="license">OEEL-1</field>.*?</record>',
+        r'<record[^>]*>.*?<field name="to_buy".*?eval="True".*?</record>',
+    ]
+    
+    for pattern in enterprise_license_patterns:
+        matches = re.findall(pattern, content, flags=re.DOTALL)
+        if matches:
+            print(f"  ℹ️  Removing {len(matches)} record(s) with Enterprise license/to_buy flag")
             total_removed += len(matches)
             content = re.sub(pattern, '', content, flags=re.DOTALL)
     
