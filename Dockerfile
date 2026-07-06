@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for OCB 18.0 on Ubuntu
+# Multi-stage Dockerfile for OCB 19.0 on Ubuntu
 # Can be used for both development and production
 #
 # FIXES APPLIED:
@@ -108,8 +108,8 @@ RUN echo '#!/bin/bash\nsource /opt/odoo/venv/bin/activate\nexec python "$@"' > /
     chmod +x /usr/local/bin/odoo-bin
 USER odoo
 
-# Clone OCB 18.0
-RUN git clone --depth 1 --branch 18.0 https://github.com/OCA/OCB.git /opt/odoo/src/odoo
+# Clone OCB 19.0
+RUN git clone --depth 1 --branch 19.0 https://github.com/OCA/OCB.git /opt/odoo/src/odoo
 
 # Copy Enterprise cleanup script
 COPY --chown=odoo:odoo cleanup_enterprise.py /tmp/cleanup_enterprise.py
