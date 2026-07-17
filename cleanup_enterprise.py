@@ -43,10 +43,7 @@ def cleanup_ir_module_module_xml(file_path):
             content = re.sub(pattern, '', content, flags=re.DOTALL)
     
     # Remove all records with Enterprise licenses (OEEL-1, LGPL-3 with to_buy)
-    enterprise_license_patterns = [
-        r'<record[^>]*>.*?<field name="license">OEEL-1</field>.*?</record>',
-        r'<record[^>]*>.*?<field name="to_buy".*?eval="True".*?</record>',
-    ]
+    enterprise_license_patterns = []
     
     for pattern in enterprise_license_patterns:
         matches = re.findall(pattern, content, flags=re.DOTALL)
