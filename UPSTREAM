@@ -1,0 +1,14 @@
+# Pinned upstream for this fork (customization ladder rung L6).
+#
+# This repo builds Odoo Community Backports (OCB) — itself already a
+# community-maintained fork of Odoo — and strips it down to a pure
+# Community-only distribution for Gentian OS. See
+# gentian-os/docs/app-customization.md §2.7 for what a rung-L6 fork owes:
+# a named owner, CVE monitoring, and a documented comparison against upstream.
+
+REPO=https://github.com/OCA/OCB.git
+BRANCH=19.0
+
+# Owner accountable for this fork, including its CVE response
+# (docs/app-customization.md §2.7).
+OWNER=platform-erp

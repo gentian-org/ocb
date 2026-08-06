@@ -114,7 +114,9 @@ RUN git clone --depth 1 --branch 19.0 https://github.com/OCA/OCB.git /opt/odoo/s
 # Copy Enterprise cleanup script
 COPY --chown=odoo:odoo cleanup_enterprise.py /tmp/cleanup_enterprise.py
 
-# Comprehensive Enterprise cleanup to ensure pure Community functionality
+# Customization ladder rung L6 delta #1 — see CUSTOMIZATIONS.md for the full
+# DEP-3-style record (author, forwarded status, review date). Comprehensive
+# Enterprise cleanup to ensure pure Community functionality.
 RUN cd /opt/odoo/src/odoo && \
     # Remove Enterprise module references from resource calendar
     sed -i '/from odoo.addons.hr_work_entry_contract.models.hr_work_intervals import WorkIntervals/d' \
@@ -141,8 +143,9 @@ RUN cd /opt/odoo/src/odoo && \
     # Clean up the script
     rm /tmp/cleanup_enterprise.py
 
-# Remove only the most problematic Enterprise modules that break Community functionality
-# Keep essential modules that are needed for basic Odoo operation
+# Customization ladder rung L6 delta #2 — see CUSTOMIZATIONS.md. Remove only the
+# most problematic Enterprise modules that break Community functionality; keep
+# essential modules that are needed for basic Odoo operation.
 RUN cd /opt/odoo/src/odoo/odoo/addons && \
     # Remove modules that have hard Enterprise dependencies
     rm -rf hr_work_entry* \

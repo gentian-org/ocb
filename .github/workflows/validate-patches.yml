@@ -1,0 +1,89 @@
+name: Validate customization patches
+
+# Customization ladder rung L5/L6 discipline (see gentian-os/docs/app-customization.md
+# and CUSTOMIZATIONS.md). This is the one CI gate that actually matters for a fork:
+# it fails the moment patches/series stops applying to pinned upstream, which is
+# exactly when the delta needs a human decision instead of silent drift.
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-series:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read pinned upstream
+        id: upstream
+        run: |
+          # shellcheck source=/dev/null
+          source UPSTREAM
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Clone pinned upstream
+        run: |
+          git clone --depth 1 --branch "${{ steps.upstream.outputs.branch }}" \
+            "${{ steps.upstream.outputs.repo }}" /tmp/upstream-checkout
+
+      - name: Apply patch series
+        run: |
+          if [ ! -s patches/series ]; then
+            echo "patches/series is empty — nothing to validate."
+            exit 0
+          fi
+          cd /tmp/upstream-checkout || exit 1
+          while IFS= read -r patch; do
+            [ -z "$patch" ] && continue
+            echo "Applying $patch"
+            if ! git apply --check "$GITHUB_WORKSPACE/patches/$patch"; then
+              echo "::error::patches/$patch does not apply cleanly to pinned upstream (${{ steps.upstream.outputs.branch }})."
+              echo "::error::Either upstream has moved past what this patch expects, or the patch needs a rebase."
+              echo "::error::See patches/README.md and CUSTOMIZATIONS.md — this is a debt signal, not a build hiccup."
+              exit 1
+            fi
+            git apply "$GITHUB_WORKSPACE/patches/$patch"
+          done < "$GITHUB_WORKSPACE/patches/series"
+          echo "All patches in series apply cleanly."
+
+      - name: Check every patch has DEP-3 headers
+        run: |
+          if [ ! -s patches/series ]; then
+            exit 0
+          fi
+          fail=0
+          while IFS= read -r patch; do
+            [ -z "$patch" ] && continue
+            for field in Description Author Forwarded Last-Update; do
+              if ! grep -q "^${field}:" "patches/$patch"; then
+                echo "::error file=patches/$patch::missing DEP-3 field '$field:'"
+                fail=1
+              fi
+            done
+            if grep -q '^Forwarded: no$' "patches/$patch" && ! grep -q '^Reason:' "patches/$patch"; then
+              echo "::error file=patches/$patch::Forwarded: no requires a Reason: field"
+              fail=1
+            fi
+          done < patches/series
+          exit "$fail"
+
+      - name: Check CUSTOMIZATIONS.md review dates
+        run: |
+          today=$(date +%Y-%m-%d)
+          fail=0
+          while read -r line; do
+            due="${line#**Review by:** }"
+            due="${due//[[:space:]]/}"
+            if [[ "$due" < "$today" ]]; then
+              echo "::warning::A customization review date ($due) has passed — see CUSTOMIZATIONS.md."
+              fail=0  # warn, not fail: a human decision, not a build break
+            fi
+          done < <(grep '\*\*Review by:\*\*' CUSTOMIZATIONS.md || true)
+          exit "$fail"
