@@ -111,6 +111,18 @@ USER odoo
 # Clone OCB 19.0
 RUN git clone --depth 1 --branch 19.0 https://github.com/OCA/OCB.git /opt/odoo/src/odoo
 
+# Customization ladder rung L5: the literal patches in patches/series, in
+# order, onto the tree just cloned. A patch that does not apply fails the
+# build (patches/README.md, CUSTOMIZATIONS.md).
+COPY --chown=odoo:odoo patches /tmp/patches
+RUN cd /opt/odoo/src/odoo && \
+    while IFS= read -r patch; do \
+        [ -z "$patch" ] && continue; \
+        echo "Applying $patch"; \
+        git apply "/tmp/patches/$patch" || exit 1; \
+    done < /tmp/patches/series && \
+    rm -rf /tmp/patches
+
 # Copy Enterprise cleanup script
 COPY --chown=odoo:odoo cleanup_enterprise.py /tmp/cleanup_enterprise.py
 

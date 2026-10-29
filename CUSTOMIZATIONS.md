@@ -67,6 +67,29 @@ distribution decision and should be reviewed together).
 
 ---
 
+## 3. Menus asked for with "?lang=" (patch)
+
+**Where:** `patches/0001-load-menus-lang-query.patch`, applied by the `Dockerfile`.
+
+**Description:** The web client's bootstrap page appends a language to the
+menu address as `&lang=` with no query before it, so a page opened with
+`?lang=` asks for `/web/webclient/load_menus&lang=xx`, gets 404 and never
+starts. The patch makes it `?lang=`.
+
+**Author:** platform-erp
+**Origin:** upstream defect, the same in odoo/odoo 19.0
+**Bug-Upstream:** none filed
+**Forwarded:** no — not filed yet
+**Applied-Upstream:** no
+**Last-Update:** 2026-10-29
+**Review by:** 2027-04-29
+
+**Licensing effect:** none.
+
+**Exit criteria:** drop once upstream 19.0 builds the address with `?`.
+
+---
+
 ## Verifying this list is current
 
 CI (`patches/series` gate) checks that any literal patches still apply cleanly

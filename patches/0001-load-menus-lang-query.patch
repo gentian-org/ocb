@@ -1,0 +1,28 @@
+Description: Ask for the menus with "?lang=", not "&lang="
+ The web client's bootstrap page loads the menus from
+ /web/webclient/load_menus and, when the page's own address names a
+ language (?lang=xx), appends it as "&lang=xx". The address has no query
+ before it, so the request is /web/webclient/load_menus&lang=xx: a path
+ no route matches. It answers 404, the menus never load and the web
+ client does not start -- a blank page after a successful sign-in. The
+ desktop opens Odoo with ?lang=, so every Odoo it opened was blank.
+Author: platform-erp
+Origin: other, https://github.com/OCA/OCB/blob/19.0/addons/web/views/webclient_templates.xml
+Bug-Upstream: none filed
+Forwarded: no
+Reason: not filed yet; the same line is in odoo/odoo 19.0, where it belongs
+Applied-Upstream: no
+Last-Update: 2026-10-29
+diff --git a/addons/web/views/webclient_templates.xml b/addons/web/views/webclient_templates.xml
+index a34e38e..ea6c7af 100644
+--- a/addons/web/views/webclient_templates.xml
++++ b/addons/web/views/webclient_templates.xml
+@@ -288,7 +288,7 @@
+                         let menuURL = "/web/webclient/load_menus";
+                         if (lang) {
+                             user_context.lang = lang;
+-                            menuURL += `&amp;lang=${lang}`;
++                            menuURL += `?lang=${lang}`;
+                         }
+                         odoo.reloadMenus = () => fetch(menuURL, { cache: "no-store" }).then(res => res.json());
+                         odoo.loadMenusPromise = odoo.reloadMenus();
